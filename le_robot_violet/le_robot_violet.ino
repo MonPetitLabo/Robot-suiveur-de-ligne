@@ -1,5 +1,7 @@
-#include <IRremote.h>
-#include <IRremoteInt.h>
+//#include <IRremote.h>
+
+#include <LiquidCrystal.h>
+
 
 #include <QTRSensors.h>
 
@@ -24,19 +26,22 @@ the L293D chip
 #define VIRAGE_3 .5
 
 // infrarouge
-#define RECEIVER 11
+#define RECEIVER 9
 
 // capteur
 #define NUM_SENSORS 3
 // définition des ports analogiques
 QTRSensorsAnalog qtr((char[]) {0, 1, 2}, NUM_SENSORS);
 //infrarouge
-IRrecv irrecv(RECEIVER);
-decode_results results;
+//IRrecv irrecv(RECEIVER);
+//decode_results results;
+
+//LCD
+LiquidCrystal lcd(1, 2, 10, 11, 12, 13);
 
 String oldMouve = "";
 bool reverse = false;
-
+bool manualMode = false;
 
 
 void setup() {
@@ -48,7 +53,8 @@ void setup() {
   pinMode(DIRA_LEFT,OUTPUT);
   pinMode(DIRB_LEFT,OUTPUT);
   Serial.begin(9600);
-
+  lcd.begin(16, 2);
+  lcd.print("Hello, World!");
   Serial.println("Début de la calibration");
   int i;
   for (i = 0; i < 250; i++)  // make the calibration take about 5 seconds
@@ -72,7 +78,7 @@ void setup() {
   }
   Serial.println();
   Serial.println();
-  irrecv.enableIRIn();
+//  irrecv.enableIRIn();
   delay(1000);
 }
 
@@ -138,20 +144,31 @@ void avancerGauche(int niveauBraquage) {
 }
 
 void loop() {
-  if(irrecv.decode(&results)) {
+  /*if(irrecv.decode(&results)) {
     Serial.print("Telecommande : ");
     Serial.println(results.value);
     delay(100);
     irrecv.resume();
-  }
-  unsigned int sensors[3];
+  }*/
+
+  if(manualMode){
+    Serial.print("Mode manuel");
+  }else{
+    unsigned int sensors[3];
   // get calibrated sensor values returned in the sensors array, along with the line
   // position, which will range from 0 to 2000, with 1000 corresponding to the line
   // over the middle sensor.
   int position = qtr.readLine(sensors);
   getDirectionFromPosition(position);
-  Serial.print("Position ");
+  String positionStr = "Position ";
+  Serial.print(positionStr);
   Serial.println(position);
+  lcd.setCursor(0, 0);
+  lcd.print(positionStr);
+  lcd.setCursor(0, 1);
+  lcd.print(position);
+  }
+  
   delay(2000);
 }
 
