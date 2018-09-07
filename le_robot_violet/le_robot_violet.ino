@@ -46,16 +46,17 @@ bool manualMode = false;
 
 void setup() {
   //---set pin direction
-  pinMode(ENABLE_RIGHT,OUTPUT);
+  /*pinMode(ENABLE_RIGHT,OUTPUT);
   pinMode(DIRA_RIGHT,OUTPUT);
   pinMode(DIRB_RIGHT,OUTPUT);
   pinMode(ENABLE_LEFT,OUTPUT);
   pinMode(DIRA_LEFT,OUTPUT);
-  pinMode(DIRB_LEFT,OUTPUT);
-  Serial.begin(9600);
+  pinMode(DIRB_LEFT,OUTPUT);*/
+  //Serial.begin(9600);
   lcd.begin(16, 2);
-  lcd.print("Hello, World!");
-  Serial.println("Début de la calibration");
+  lcd.print("Debut");
+  lcd.setCursor(0, 1);
+  lcd.print("calibration");
   int i;
   for (i = 0; i < 250; i++)  // make the calibration take about 5 seconds
   {
@@ -76,9 +77,12 @@ void setup() {
     Serial.print(qtr.calibratedMaximumOn[i]);
     Serial.print(' ');
   }
-  Serial.println();
-  Serial.println();
-//  irrecv.enableIRIn();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Calibration");
+  lcd.setCursor(0, 1);
+  lcd.print("terminee");
+  //irrecv.enableIRIn();
   delay(1000);
 }
 
@@ -159,10 +163,11 @@ void loop() {
   // position, which will range from 0 to 2000, with 1000 corresponding to the line
   // over the middle sensor.
   int position = qtr.readLine(sensors);
-  getDirectionFromPosition(position);
+  //getDirectionFromPosition(position);
   String positionStr = "Position ";
   Serial.print(positionStr);
   Serial.println(position);
+  lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print(positionStr);
   lcd.setCursor(0, 1);
@@ -170,6 +175,7 @@ void loop() {
   }
   
   delay(2000);
+  
 }
 
 void getDirectionFromPosition(int position) {
