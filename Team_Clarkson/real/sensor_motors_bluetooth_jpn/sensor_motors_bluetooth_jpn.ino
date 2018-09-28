@@ -58,9 +58,11 @@ const String AUTO_MODE = "AUTO";
 
 // Global vars
 boolean isAutoMode = true;
-int currentMotorsSpeed = 255;
-int choosedMotorsSpeed = 255;
+int currentMotorsSpeed = 50;
+int maxMotorsSpeed = 150;
+int choosedMotorsSpeed = 50;
 int currentPosition = 0;
+int oldPosition = 0;
 
 void setup() {
   // Power pins 
@@ -122,17 +124,18 @@ void loop() {
   checkBluetoothInput();
 
   // position calculation
+  oldPosition = currentPosition;
   currentPosition = calculateCurrentPosition();
     
   if(isAutoMode){  
     Serial.print(">>current position : ");
     Serial.println(currentPosition);
-    runAutoMode(currentPosition, currentMotorsSpeed);
+    runAutoMode(currentPosition, oldPosition, currentMotorsSpeed);
   }else{
-    runMotors(currentMotorsSpeed, true, true, false);
+    runMotors(currentMotorsSpeed, true, true, false, true, true);
   }
 
-  delay(50);
+  delay(10);
 }
 
 int calculateCurrentPosition(){
@@ -143,15 +146,25 @@ int calculateCurrentPosition(){
   return position;
 }
 
-void runAutoMode(int currentPosition, int motorSpeed){
+void runAutoMode(int currentPosition, int oldPosition, int motorSpeed){
   if(currentPosition < -250){
-    runMotors(motorSpeed, true, false, true);
+    if(oldPosition > 250){
+      runMotors(motorSpeed, false, false, false, true, true);
+      delay(20);
+    }
+    
+    runMotors(maxMotorsSpeed, true, true, true, true, false);
     Serial.println(">DD");
   }else if(currentPosition > 250){
-    runMotors(motorSpeed, false, true, true);
+    if(oldPosition < 250){
+      runMotors(motorSpeed, false, false, false, true, true);
+      delay(20);
+    }
+    
+    runMotors(maxMotorsSpeed, true, true, true, false, true);
     Serial.println(">GG");
   }else{
-    runMotors(motorSpeed, true, true, false);
+    runMotors(motorSpeed, true, true, false, true, true);
     Serial.println(">GD");
   }
 }
@@ -164,19 +177,28 @@ void runAutoMode(int currentPosition, int motorSpeed){
  * isMotorRight : run the right motor
  * stopOther : stop the other motor (if one of the two motors must be stopped)
  */
-void runMotors(int motorSpeed, boolean isMotorLeft, boolean isMotorRight, boolean stopOther){
-  // Rotation direction
-  digitalWrite(DIRAG,HIGH);
-  digitalWrite(DIRBG,LOW);
-
-  digitalWrite(DIRAD,HIGH);
-  digitalWrite(DIRBD,LOW);
-
+void runMotors(int motorSpeed, boolean isMotorLeft, boolean isMotorRight, boolean stopOther, boolean leftMotorUp, boolean rightMotorUp){
   // controls for motors speed
   if(motorSpeed < 0){
     motorSpeed = 0;
   }else if(motorSpeed > 255){
     motorSpeed = 255;
+  }
+
+  // Rotation direction
+  if(leftMotorUp){
+      digitalWrite(DIRAG,HIGH);
+      digitalWrite(DIRBG,LOW);
+  }else{
+      digitalWrite(DIRAG,LOW);
+      digitalWrite(DIRBG,HIGH);
+  }
+  if(rightMotorUp){
+    digitalWrite(DIRAD,HIGH);
+    digitalWrite(DIRBD,LOW);
+  }else{
+    digitalWrite(DIRAD,LOW);
+    digitalWrite(DIRBD,HIGH);
   }
   
   if(isMotorLeft && isMotorRight){
@@ -266,10 +288,10 @@ void checkBluetoothInput(){
 
     if(input.startsWith(MANUAL_MODE)){
       isAutoMode = false;
-      runMotors(currentMotorsSpeed, false, false, true); 
+      runMotors(currentMotorsSpeed, false, false, true, true, true); 
     }else if(input.startsWith(AUTO_MODE)){
       isAutoMode = true;
-      runMotors(currentMotorsSpeed, true, true, false);
+      runMotors(currentMotorsSpeed, true, true, false, true, true);
     }else if(input.startsWith(SPEED_CHOOSE_PREFIX) && input.endsWith(SPEED_CHOOSE_PREFIX)){
       currentMotorsSpeed = input.substring(SPEED_CHOOSE_PREFIX.length(), input.length() - SPEED_CHOOSE_PREFIX.length()).toInt();
 
@@ -279,29 +301,29 @@ void checkBluetoothInput(){
     }else if(input.startsWith(DIRECTION_UP)){
       Serial.println("== GO ==");
       currentMotorsSpeed = choosedMotorsSpeed;
-      runMotors(currentMotorsSpeed, true, true, false);
+      runMotors(currentMotorsSpeed, true, true, false, true, true);
     }else if(input.startsWith(DIRECTION_UP_CANCEL)){
       Serial.println("== STOP ==");
       currentMotorsSpeed = 0;
-      runMotors(currentMotorsSpeed, false, false, true);
+      runMotors(currentMotorsSpeed, false, false, true, true, true);
     }else if(input.startsWith(DIRECTION_STOP)){
         Serial.println("== STOP ==");
         currentMotorsSpeed = 0;
-        runMotors(currentMotorsSpeed, false, false, true);
+        runMotors(currentMotorsSpeed, false, false, true, true, true);
     }else if(!isAutoMode){
       // checks manual directions only if in manual mode
       if(input.startsWith(DIRECTION_LEFT)){
         Serial.println("== LEFT ==");
-        runMotors(currentMotorsSpeed, true, false, true);
+        runMotors(currentMotorsSpeed, true, false, true, true, false);
       }else if(input.startsWith(DIRECTION_LEFT_CANCEL)){
         Serial.println("== LEFT STOP ==");
-        runMotors(currentMotorsSpeed, true, true, false);
+        runMotors(currentMotorsSpeed, true, true, false, true, true);
       }else if(input.startsWith(DIRECTION_RIGHT)){
         Serial.println("== RIGHT ==");
-        runMotors(currentMotorsSpeed, false, true, true);
+        runMotors(currentMotorsSpeed, false, true, true, false, true);
       }else if(input.startsWith(DIRECTION_RIGHT_CANCEL)){
         Serial.println("== RIGHT STOP ==");
-        runMotors(currentMotorsSpeed, false, true, false);
+        runMotors(currentMotorsSpeed, false, true, false, true, true);
       }else if(input.startsWith(DIRECTION_BACK)){
         Serial.println("== BACK ==");
         // TODO : traitement sens inverse
