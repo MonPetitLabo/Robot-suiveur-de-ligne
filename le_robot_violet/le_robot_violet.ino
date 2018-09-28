@@ -45,9 +45,11 @@ LiquidCrystal lcd(1, 2, 10, 11, 12, 13);
 String oldMouve = "";
 bool reverse = false;
 bool manualMode = false;
-bool start = true;
+bool start = false;
 String manualDirection = "a";
-int manuelSpeed = 255;
+int maxSpeed = 180;
+int minSpeed = 140;
+int manuelSpeed = maxSpeed;
 bool manualStart = true;
 
 void translateIR(){
@@ -120,10 +122,10 @@ void translateIR(){
       
         break;
       case 0xFFE01F:
-        if(manuelSpeed>=10){
-          manuelSpeed = manuelSpeed-10;
+        if(manuelSpeed >= minSpeed+10){
+          manuelSpeed = manuelSpeed - 10;
         }else{
-          manuelSpeed=0;
+          manuelSpeed = minSpeed;
         }
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -136,10 +138,10 @@ void translateIR(){
         lcd.print("Reculer");
         break;
       case 0xFF906F:
-        if(manuelSpeed<=245){
-          manuelSpeed = manuelSpeed+10;
+        if(manuelSpeed <= maxSpeed - 10){
+          manuelSpeed = manuelSpeed + 10;
         }else{
-          manuelSpeed=255;
+          manuelSpeed = maxSpeed;
         }
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -181,7 +183,7 @@ void setup() {
   lcd.print("calibration");
   //Serial.println("calibration");
   int i;
-  for (i = 0; i < 250; i++)  // make the calibration take about 5 seconds
+  for (i = 0; i < 500; i++)  // make the calibration take about 5 seconds
   {
     qtr.calibrate();
     delay(20);
@@ -233,27 +235,27 @@ void actionnerMoteur2(int vitesse) {
 
 void avancerDroite(int niveauBraquage) {
   if(niveauBraquage == 1) {
-    actionnerMoteur1(255);
-    actionnerMoteur2(255 * VIRAGE_1);
+    actionnerMoteur1(maxSpeed);
+    actionnerMoteur2(maxSpeed * VIRAGE_1);
   } else if(niveauBraquage == 2) {
-    actionnerMoteur1(255);
-    actionnerMoteur2(255 * VIRAGE_2);
+    actionnerMoteur1(maxSpeed);
+    actionnerMoteur2(maxSpeed * VIRAGE_2);
   } else if(niveauBraquage == 3) {
-    actionnerMoteur1(255);
-    actionnerMoteur2(-255 * VIRAGE_3);
+    actionnerMoteur1(maxSpeed);
+    actionnerMoteur2(maxSpeed * -1 * VIRAGE_3);
   }
 }
 
 void avancerGauche(int niveauBraquage) {
   if(niveauBraquage == 1) {
-    actionnerMoteur2(255);
-    actionnerMoteur1(255 * VIRAGE_1);
+    actionnerMoteur2(maxSpeed);
+    actionnerMoteur1(maxSpeed * VIRAGE_1);
   } else if(niveauBraquage == 2) {
-    actionnerMoteur2(255);
-    actionnerMoteur1(255 * VIRAGE_2);
+    actionnerMoteur2(maxSpeed);
+    actionnerMoteur1(maxSpeed * VIRAGE_2);
   } else if(niveauBraquage == 3) {
-    actionnerMoteur2(255);
-    actionnerMoteur1(-255 * VIRAGE_3);
+    actionnerMoteur2(maxSpeed);
+    actionnerMoteur1(maxSpeed * -1 * VIRAGE_3);
   }
 }
 
@@ -272,12 +274,12 @@ void loop() {
         if(manualStart){
           if(manualDirection=="a"){
             rouler(manuelSpeed);
-            float pourcentageVitesse = float(manuelSpeed)/255*100;
+            float pourcentageVitesse = float(manuelSpeed)/maxSpeed*100;
             String vitesse = String(pourcentageVitesse) + "%";
             lcd.print("Avance : " + vitesse);
           }else if(manualDirection=="r"){
             rouler(manuelSpeed*-1);
-            float pourcentageVitesse = float(manuelSpeed)/255*100;
+            float pourcentageVitesse = float(manuelSpeed)/maxSpeed*100;
             String vitesse = String(pourcentageVitesse) + "%";
             lcd.print("Recule : "+ vitesse);
           }else if(manualDirection=="d1"){
@@ -329,12 +331,12 @@ void loop() {
   }
  
   
-  delay(200);
+  delay(10);
 }
 
 void getDirectionFromPosition(int position) {
   if(position >= 900 && position <= 1100) {
-    rouler(255);
+    rouler(maxSpeed);
     reverse = false;
     oldMouve = "A";
     lcd.setCursor(0, 1);
@@ -387,11 +389,11 @@ void findLine() {
   if(! reverse) {
     if(oldMouve == "A") {
       Serial.println("find line : marche arrière");
-      rouler(-255);
+      rouler(maxSpeed * -1);
       oldMouve = "R";
     } else if(oldMouve == "R") {
       Serial.println("find line : marche avant");
-      rouler(255);
+      rouler(maxSpeed);
       oldMouve = "A";
     } else if(oldMouve.startsWith("D")) {
       Serial.println("find line : gauche 1");
