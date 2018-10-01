@@ -50,8 +50,8 @@ const String AUTO_MODE = "AUTO";
 
 // Global vars
 boolean isAutoMode = true;
-int currentMotorsSpeed = 150;
-int maxMotorsSpeed = 200;
+int currentMotorsSpeed = 250;
+int maxMotorsSpeed = 250;
 int currentPosition = 0;
 int oldPosition = 0;
 
@@ -103,7 +103,7 @@ void loop() {
   Serial.print(">>current position : ");
   Serial.println(currentPosition);
   runAutoMode(currentPosition, oldPosition, currentMotorsSpeed);
-  delay(10);
+  delay(15);
   analogWrite(ENABLEG, 0); 
   analogWrite(ENABLED, 0);
 }
