@@ -16,15 +16,15 @@
 
 // Motor data
 #define MIN_MOTOR 0
-#define MAX_MOTOR 255
+#define MAX_MOTOR 250
 
 
 #define MAX_VALUE_MOTOR 200 // Max value : 255
 
 #define STOP_BEFORE_TURN 0
 
-#define ZONE_MORT_POSITIF 500
-#define ZONE_MORT_NEGATIF -500
+#define ZONE_MORT_POSITIF 250
+#define ZONE_MORT_NEGATIF -250
 
 const int SW_pin = 2; // digital pin connected to switch output
 const int X_pin = 0; // analog pin connected to X output
@@ -97,10 +97,11 @@ void loop() {
     } else if (newDirection >= ZONE_MORT_POSITIF) {
       Serial.print("\t --> turn left");
       turnLeft(needFastTurn(newDirection, oldDirection));
-    }     
+    }
     delay(15);
-    stop();
+    stop();     
   }
+  
 }
 
 boolean needFastTurn(int currentDirection, int previousDirection) {
