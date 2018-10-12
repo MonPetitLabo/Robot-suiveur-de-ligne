@@ -26,7 +26,7 @@ the L293D chip
 
 #define VIRAGE_1 .5
 #define VIRAGE_2 .0
-#define VIRAGE_3 .5
+#define VIRAGE_3 1
 
 // infrarouge
 #define RECEIVER 9
@@ -48,12 +48,13 @@ bool manualMode = false;
 bool start = false;
 String manualDirection = "a";
 int maxSpeed = 210;
-int minSpeed = 130;
+int minSpeed = 140;
 int manuelSpeed = maxSpeed;
 bool manualStart = true;
 String affichage1 ="";
 String affichage2 ="";
 int affichageTime=0;
+int loopBeforeFindLine = -1;
 
 void setup() {
   //---set pin direction
@@ -133,27 +134,27 @@ void actionnerMoteur2(int vitesse) {
 
 void avancerDroite(int niveauBraquage) {
   if(niveauBraquage == 1) {
-    actionnerMoteur1(maxSpeed);
-    actionnerMoteur2(maxSpeed * VIRAGE_1);
+    actionnerMoteur1(manuelSpeed);
+    actionnerMoteur2(manuelSpeed * VIRAGE_1);
   } else if(niveauBraquage == 2) {
-    actionnerMoteur1(maxSpeed);
-    actionnerMoteur2(maxSpeed * VIRAGE_2);
+    actionnerMoteur1(manuelSpeed);
+    actionnerMoteur2(manuelSpeed * VIRAGE_2);
   } else if(niveauBraquage == 3) {
-    actionnerMoteur1(maxSpeed);
-    actionnerMoteur2(maxSpeed * -1 * VIRAGE_3);
+    actionnerMoteur1(minSpeed);
+    actionnerMoteur2(minSpeed * -1 * VIRAGE_3);
   }
 }
 
 void avancerGauche(int niveauBraquage) {
   if(niveauBraquage == 1) {
-    actionnerMoteur2(maxSpeed);
-    actionnerMoteur1(maxSpeed * VIRAGE_1);
+    actionnerMoteur2(manuelSpeed);
+    actionnerMoteur1(manuelSpeed * VIRAGE_1);
   } else if(niveauBraquage == 2) {
-    actionnerMoteur2(maxSpeed);
-    actionnerMoteur1(maxSpeed * VIRAGE_2);
+    actionnerMoteur2(manuelSpeed);
+    actionnerMoteur1(manuelSpeed * VIRAGE_2);
   } else if(niveauBraquage == 3) {
-    actionnerMoteur2(maxSpeed);
-    actionnerMoteur1(maxSpeed * -1 * VIRAGE_3);
+    actionnerMoteur2(minSpeed);
+    actionnerMoteur1(minSpeed * -1 * VIRAGE_3);
   }
 }
 
@@ -167,6 +168,8 @@ void loop() {
   affichageTime++;
   if(affichageTime==255){
     lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("vit:" +String(manuelSpeed));
     lcd.setCursor(8, 1);
     lcd.print("pos:" +String(position));
     affichageTime=0;
@@ -219,8 +222,8 @@ void loop() {
         
         
       }else{
-        lcd.setCursor(0, 0);
-        lcd.print("Mode auto");
+        //lcd.setCursor(0, 0);
+        //lcd.print("Mode auto");
       // get calibrated sensor values returned in the sensors array, along with the line
       // position, which will range from 0 to 2000, with 1000 corresponding to the line
       // over the middle sensor.
@@ -244,7 +247,7 @@ void loop() {
 
 void getDirectionFromPosition(int position) {
   if(position >= 950 && position <= 1050) {
-    rouler(maxSpeed);
+    rouler(manuelSpeed);
     reverse = false;
     oldMouve = "A";
     lcd.setCursor(0, 1);
@@ -261,7 +264,7 @@ void getDirectionFromPosition(int position) {
     oldMouve = "D2";
     lcd.setCursor(0, 1);
     lcd.print("cmd d2, pos:" +String(position));
-  } else if(position > 0 && position < 400) {
+  } else if(position > 50 && position < 400) {
     avancerDroite(3);
     reverse = false;
     oldMouve = "D3";
@@ -279,17 +282,21 @@ void getDirectionFromPosition(int position) {
     oldMouve = "G2";
     lcd.setCursor(0, 1);
     lcd.print("cmd g2, pos:"+ String(position));
-  } else if(position > 1600 && position < 2000) {
+  } else if(position > 1950 && position < 2000) {
     avancerGauche(3);
     reverse = false;
     oldMouve = "G3";
     lcd.setCursor(0, 1);
     lcd.print("cmd g3, pos:"+ String(position));
-  } else if(position == 0 || position == 2000) {
+  } else if(position <= 50 || position >= 1950) {
     lcd.setCursor(0, 1);
     lcd.print("No line found");
-    delay(100);
-    //findLine();
+    if(loopBeforeFindLine == -1) {
+      loopBeforeFindLine = 100;
+    }
+    if(loopBeforeFindLine-- == 0) {
+      findLine();
+    }
   }
 }
 
@@ -297,22 +304,22 @@ void findLine() {
   if(! reverse) {
     if(oldMouve == "A") {
       Serial.println("find line : marche arrière");
-      rouler(maxSpeed * -1);
-      oldMouve = "R";
-    } else if(oldMouve == "R") {
+      rouler(manuelSpeed * -1);
+      //oldMouve = "R";
+    }/* else if(oldMouve == "R") {
       Serial.println("find line : marche avant");
-      rouler(maxSpeed);
+      rouler(manuelSpeed);
       oldMouve = "A";
-    } else if(oldMouve.startsWith("D")) {
+    }*/ else if(oldMouve.startsWith("G")) {
       Serial.println("find line : gauche 1");
-      avancerGauche(1);
-      oldMouve = "G1";
-    } else if(oldMouve.startsWith("G")) {
+      avancerGauche(3);
+      //oldMouve = "G1";
+    } else if(oldMouve.startsWith("D")) {
       Serial.println("find line : droite 1");
-      avancerDroite(1);
-      oldMouve = "D1";
+      avancerDroite(3);
+      //oldMouve = "D1";
     }
-  } else {
+  }/* else {
     if(oldMouve == "A" || oldMouve == "R" || oldMouve.endsWith("3")) {
       Serial.println("find line : last chance");
       lastChance();
@@ -333,7 +340,7 @@ void findLine() {
       avancerGauche(3);
       oldMouve = "G3";
     }
-  }
+  }*/
   reverse = true;
 }
 
