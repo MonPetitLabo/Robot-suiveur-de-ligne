@@ -47,7 +47,7 @@ bool reverse = false;
 bool manualMode = false;
 bool start = false;
 String manualDirection = "a";
-int maxSpeed = 210;
+int maxSpeed = 80;
 int minSpeed = 140;
 int manuelSpeed = maxSpeed;
 bool manualStart = true;
@@ -107,11 +107,11 @@ void actionnerMoteur1(int vitesse) {
   if(vitesse < 0) {
     digitalWrite(DIRA_RIGHT,LOW);
     digitalWrite(DIRB_RIGHT,HIGH);
-    analogWrite(ENABLE_RIGHT,vitesse * -1);
+    analogWrite(ENABLE_RIGHT,(vitesse * -1)+140);
   } else if(vitesse > 0) {
     digitalWrite(DIRA_RIGHT,HIGH);
     digitalWrite(DIRB_RIGHT,LOW);
-    analogWrite(ENABLE_RIGHT,vitesse);
+    analogWrite(ENABLE_RIGHT,vitesse+140);
   } else {
     digitalWrite(ENABLE_RIGHT,LOW);
   }
@@ -122,11 +122,11 @@ void actionnerMoteur2(int vitesse) {
   if(vitesse < 0) {
     digitalWrite(DIRA_LEFT,LOW);
     digitalWrite(DIRB_LEFT,HIGH);
-    analogWrite(ENABLE_LEFT,vitesse * -1);
+    analogWrite(ENABLE_LEFT,(vitesse * -1)+140);
   } else if(vitesse > 0) {
     digitalWrite(DIRA_LEFT,HIGH);
     digitalWrite(DIRB_LEFT,LOW);
-    analogWrite(ENABLE_LEFT,vitesse);
+    analogWrite(ENABLE_LEFT,vitesse+140);
   } else {
     digitalWrite(ENABLE_LEFT,LOW);
   }
@@ -227,7 +227,7 @@ void loop() {
       // get calibrated sensor values returned in the sensors array, along with the line
       // position, which will range from 0 to 2000, with 1000 corresponding to the line
       // over the middle sensor.
-      getDirectionFromPosition(position);
+      getVitesseFromPosition(position);
       //String positionStr = "Position ";
       //Serial.print(positionStr);
       //Serial.println(position);
@@ -244,6 +244,27 @@ void loop() {
   
   //delay(10);
 }
+
+void getVitesseFromPosition(int position){
+  position = position - 1000;
+
+  //Gestion moteur droit
+  if(position>=0){
+    actionnerMoteur2(maxSpeed);
+  }else{
+    int vitesse = maxSpeed + int((float(position)/6.25));
+    actionnerMoteur2(vitesse);
+  }
+
+//Gestion moteur gauche
+  if(position<=0){
+    actionnerMoteur1(maxSpeed);
+  }else{
+    int vitesse = maxSpeed - int((float(position)/6.25));
+    actionnerMoteur1(vitesse);
+  }
+}
+
 
 void getDirectionFromPosition(int position) {
   if(position >= 950 && position <= 1050) {
@@ -469,4 +490,3 @@ void translateIR(){
   }
   irrecv.resume();
 }
-
