@@ -42,19 +42,15 @@ decode_results results;
 //LCD
 LiquidCrystal lcd(1, 2, 10, 11, 12, 13);
 
-String oldMouve = "";
-bool reverse = false;
 bool manualMode = false;
-bool start = false;
+bool start = true;
 String manualDirection = "a";
-int maxSpeed = 80;
-int minSpeed = 140;
+int maxSpeed = 60;
+int minSpeed = 0;
 int manuelSpeed = maxSpeed;
 bool manualStart = true;
-String affichage1 ="";
-String affichage2 ="";
 int affichageTime=0;
-int loopBeforeFindLine = -1;
+unsigned int sensors[3];
 
 void setup() {
   //---set pin direction
@@ -68,6 +64,27 @@ void setup() {
   lcd.begin(16, 2);
   calibrate();
   irrecv.enableIRIn();
+}
+
+void loop() {
+  //translateIR();
+  
+  int position = qtr.readLine(sensors,QTR_EMITTERS_ON);
+  if(start){
+     if(manualMode){
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Mode manuel");
+        lcd.setCursor(0, 1);
+        manageManualMode();
+      }else{
+       // displayPosition(position);
+        getVitesseFromPosition(position);
+      }
+  }else{
+    displayPosition(position);
+    rouler(0);
+  }
 }
 
 void calibrate() {
@@ -85,7 +102,7 @@ void calibrate() {
   int i;
   for (i = 0; i < 500; i++)  // make the calibration take about 5 seconds
   {
-    qtr.calibrate();
+    qtr.calibrate(QTR_EMITTERS_ON);
     delay(20);
   }
   //Serial.println("fin calibration");
@@ -132,117 +149,55 @@ void actionnerMoteur2(int vitesse) {
   }
 }
 
-void avancerDroite(int niveauBraquage) {
-  if(niveauBraquage == 1) {
-    actionnerMoteur1(manuelSpeed);
-    actionnerMoteur2(manuelSpeed * VIRAGE_1);
-  } else if(niveauBraquage == 2) {
-    actionnerMoteur1(manuelSpeed);
-    actionnerMoteur2(manuelSpeed * VIRAGE_2);
-  } else if(niveauBraquage == 3) {
-    actionnerMoteur1(minSpeed);
-    actionnerMoteur2(minSpeed * -1 * VIRAGE_3);
-  }
-}
-
-void avancerGauche(int niveauBraquage) {
-  if(niveauBraquage == 1) {
-    actionnerMoteur2(manuelSpeed);
-    actionnerMoteur1(manuelSpeed * VIRAGE_1);
-  } else if(niveauBraquage == 2) {
-    actionnerMoteur2(manuelSpeed);
-    actionnerMoteur1(manuelSpeed * VIRAGE_2);
-  } else if(niveauBraquage == 3) {
-    actionnerMoteur2(minSpeed);
-    actionnerMoteur1(minSpeed * -1 * VIRAGE_3);
-  }
-}
-
-void loop() {
- if(irrecv.decode(&results)) {
-    translateIR();
-    irrecv.resume();
-  }
-  unsigned int sensors[3];
-  int position = qtr.readLine(sensors);
+void displayPosition(int position) {
   affichageTime++;
   if(affichageTime==255){
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("vit:" +String(manuelSpeed));
+    lcd.print("1:" +String(sensors[0]));
+    lcd.setCursor(0, 1);
+    lcd.print("2:" +String(sensors[1]));
     lcd.setCursor(8, 1);
-    lcd.print("pos:" +String(position));
+    lcd.print("3:" +String(sensors[2]));
     affichageTime=0;
   }
-  
-  
-  
-  
-  
-  if(start){
-     if(manualMode){
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Mode manuel");
-        lcd.setCursor(0, 1);
-        if(manualStart){
-          if(manualDirection=="a"){
-            rouler(manuelSpeed);
-            float pourcentageVitesse = float(manuelSpeed)/maxSpeed*100;
-            String vitesse = String(pourcentageVitesse) + "%";
-            lcd.print("Avance : " + vitesse);
-          }else if(manualDirection=="r"){
-            rouler(manuelSpeed*-1);
-            float pourcentageVitesse = float(manuelSpeed)/maxSpeed*100;
-            String vitesse = String(pourcentageVitesse) + "%";
-            lcd.print("Recule : "+ vitesse);
-          }else if(manualDirection=="d1"){
-            avancerDroite(1);
-            lcd.print("Virage droite 1");
-          }else if(manualDirection=="d2"){
-            avancerDroite(2);
-            lcd.print("Virage droite 2");
-          }else if(manualDirection=="d3"){
-            avancerDroite(3);
-            lcd.print("Virage droite 3");
-          }else if(manualDirection=="g1"){
-            avancerGauche(1);
-            lcd.print("Virage gauche 1");
-          }else if(manualDirection=="g2"){
-            avancerGauche(2);
-            lcd.print("Virage gauche 2");
-          }else if(manualDirection=="g3"){
-            avancerGauche(3);
-            lcd.print("Virage gauche 3");
-          }
-        }else{
-          rouler(0);
-          lcd.print("Pause");
-        }
-        
-        
-      }else{
-        //lcd.setCursor(0, 0);
-        //lcd.print("Mode auto");
-      // get calibrated sensor values returned in the sensors array, along with the line
-      // position, which will range from 0 to 2000, with 1000 corresponding to the line
-      // over the middle sensor.
-      getVitesseFromPosition(position);
-      //String positionStr = "Position ";
-      //Serial.print(positionStr);
-      //Serial.println(position);
-      ///lcd.clear();
-      //lcd.setCursor(0, 0);
-      //lcd.print(positionStr);
-      //lcd.setCursor(0, 1);
-      //lcd.print(position);
+}
+
+void manageManualMode() {
+    if(manualStart){
+      if(manualDirection=="a"){
+        rouler(manuelSpeed);
+        float pourcentageVitesse = float(manuelSpeed)/maxSpeed*100;
+        String vitesse = String(pourcentageVitesse) + "%";
+        lcd.print("Avance : " + vitesse);
+      }else if(manualDirection=="r"){
+        rouler(manuelSpeed*-1);
+        float pourcentageVitesse = float(manuelSpeed)/maxSpeed*100;
+        String vitesse = String(pourcentageVitesse) + "%";
+        lcd.print("Recule : "+ vitesse);
+      }else if(manualDirection=="d1"){
+        getVitesseFromPosition(750);
+        lcd.print("Virage droite 1");
+      }else if(manualDirection=="d2"){
+        getVitesseFromPosition(500);
+        lcd.print("Virage droite 2");
+      }else if(manualDirection=="d3"){
+        getVitesseFromPosition(0);
+        lcd.print("Virage droite 3");
+      }else if(manualDirection=="g1"){
+        getVitesseFromPosition(1250);
+        lcd.print("Virage gauche 1");
+      }else if(manualDirection=="g2"){
+        getVitesseFromPosition(1500);
+        lcd.print("Virage gauche 2");
+      }else if(manualDirection=="g3"){
+        getVitesseFromPosition(2000);
+        lcd.print("Virage gauche 3");
       }
-  }else{
-    rouler(0);
-  }
- 
-  
-  //delay(10);
+    }else{
+      rouler(0);
+      lcd.print("Pause");
+    }
 }
 
 void getVitesseFromPosition(int position){
@@ -252,7 +207,7 @@ void getVitesseFromPosition(int position){
   if(position>=0){
     actionnerMoteur2(maxSpeed);
   }else{
-    int vitesse = maxSpeed + int((float(position)/6.25));
+    int vitesse = maxSpeed + int((float(position)/float(500/maxSpeed)));
     actionnerMoteur2(vitesse);
   }
 
@@ -260,121 +215,15 @@ void getVitesseFromPosition(int position){
   if(position<=0){
     actionnerMoteur1(maxSpeed);
   }else{
-    int vitesse = maxSpeed - int((float(position)/6.25));
+    int vitesse = maxSpeed - int((float(position)/float(500/maxSpeed)));
     actionnerMoteur1(vitesse);
   }
 }
 
 
-void getDirectionFromPosition(int position) {
-  if(position >= 950 && position <= 1050) {
-    rouler(manuelSpeed);
-    reverse = false;
-    oldMouve = "A";
-    lcd.setCursor(0, 1);
-    lcd.print("cmd a , pos:" +String(position));
-  } else if(position >= 700 && position < 950) {
-    avancerDroite(1);
-    reverse = false;
-    oldMouve = "D1";
-    lcd.setCursor(0, 1);
-    lcd.print("cmd d1, pos:" +String(position));
-  } else if(position >= 400 && position < 700) {
-    avancerDroite(2);
-    reverse = false;
-    oldMouve = "D2";
-    lcd.setCursor(0, 1);
-    lcd.print("cmd d2, pos:" +String(position));
-  } else if(position > 50 && position < 400) {
-    avancerDroite(3);
-    reverse = false;
-    oldMouve = "D3";
-    lcd.setCursor(0, 1);
-    lcd.print("cmd d3, pos:"+ String(position));
-  } else if(position > 1050 && position <= 1300) {
-    avancerGauche(1);
-    reverse = false;
-    oldMouve = "G1";
-    lcd.setCursor(0, 1);
-    lcd.print("cmd g1, pos:"+ String(position));
-  } else if(position > 1300 && position <= 1600) {
-    avancerGauche(2);
-    reverse = false;
-    oldMouve = "G2";
-    lcd.setCursor(0, 1);
-    lcd.print("cmd g2, pos:"+ String(position));
-  } else if(position > 1950 && position < 2000) {
-    avancerGauche(3);
-    reverse = false;
-    oldMouve = "G3";
-    lcd.setCursor(0, 1);
-    lcd.print("cmd g3, pos:"+ String(position));
-  } else if(position <= 50 || position >= 1950) {
-    lcd.setCursor(0, 1);
-    lcd.print("No line found");
-    if(loopBeforeFindLine == -1) {
-      loopBeforeFindLine = 100;
-    }
-    if(loopBeforeFindLine-- == 0) {
-      findLine();
-    }
-  }
-}
 
-void findLine() {
-  if(! reverse) {
-    if(oldMouve == "A") {
-      Serial.println("find line : marche arrière");
-      rouler(manuelSpeed * -1);
-      //oldMouve = "R";
-    }/* else if(oldMouve == "R") {
-      Serial.println("find line : marche avant");
-      rouler(manuelSpeed);
-      oldMouve = "A";
-    }*/ else if(oldMouve.startsWith("G")) {
-      Serial.println("find line : gauche 1");
-      avancerGauche(3);
-      //oldMouve = "G1";
-    } else if(oldMouve.startsWith("D")) {
-      Serial.println("find line : droite 1");
-      avancerDroite(3);
-      //oldMouve = "D1";
-    }
-  }/* else {
-    if(oldMouve == "A" || oldMouve == "R" || oldMouve.endsWith("3")) {
-      Serial.println("find line : last chance");
-      lastChance();
-    } else if(oldMouve == "D1") {
-      Serial.println("find line : droite 2");
-      avancerDroite(2);
-      oldMouve = "D2";
-    } else if(oldMouve == "D2") {
-      Serial.println("find line : droite 3");
-      avancerDroite(3);
-      oldMouve = "D3";
-    } else if(oldMouve == "G1") {
-      Serial.println("find line : gauche 2");
-      avancerGauche(2);
-      oldMouve = "G2";
-    } else if(oldMouve == "G2") {
-      Serial.println("find line : gauche 3");
-      avancerGauche(3);
-      oldMouve = "G3";
-    }
-  }*/
-  reverse = true;
-}
-
-void lastChance() {
-  //TODO
-  lcd.setCursor(0, 1);
-  lcd.print("Error stop !   ");
-  rouler(0);
-}
 
 void translateIR(){
-  lcd.clear();
-  lcd.print("interrupt");
   if(irrecv.decode(&results)) {
     lcd.clear();
     lcd.print("Commande");
@@ -487,6 +336,7 @@ void translateIR(){
         lcd.print(" other button   ");
     }
     delay(500);
+    irrecv.resume();
   }
-  irrecv.resume();
+  
 }
