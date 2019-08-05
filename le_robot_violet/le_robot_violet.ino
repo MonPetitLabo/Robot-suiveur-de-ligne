@@ -52,12 +52,48 @@ const int AT_COMMAND_WAIT_TIME = 250; // time in ms to wait after command printe
 bool manualMode = false;
 bool start = true;
 String manualDirection = "a";
-int maxSpeed = 60;
+int maxSpeed = 20;
 int minSpeed = 0;
 int manuelSpeed = maxSpeed;
 bool manualStart = true;
 int affichageTime=0;
 unsigned int sensors[3];
+
+
+/**
+ * Send a commond to the bluetooth module
+ * 
+ * command : command to send
+ * isATCommand : specify if the command is for the module configuration or is to send to connected devices
+ */
+void runCommand(String command, boolean isATCommand){
+  if(command.length() > 0){
+
+    // activate command mode
+    if(isATCommand){
+      digitalWrite(BLUETOOTH_KEY, HIGH);
+    }
+
+    // print command
+    Serial.print(command);
+    if(isATCommand){
+      Serial.print("\r\n");
+    }else{
+      Serial.print("@");
+    }
+
+    // unactive command mode
+    if(isATCommand){
+      digitalWrite(BLUETOOTH_KEY, LOW);
+    }
+  }
+}
+
+void sendMessage(String msg){
+  if(digitalRead(BLUETOOTH_STATE)== HIGH){
+      runCommand(msg, false);
+  }
+}
 
 void setup() {
   //---set pin direction
@@ -77,33 +113,16 @@ void setup() {
 
   runCommand("AT+NAME=FABLAB", true);
   runCommand("AT+NAME", true);
-  runCommand("AT+PSWD=2018", true);
-  runCommand("AT+PSWD?", true);
+//  runCommand("AT+PSWD=2018", true);
+//  runCommand("AT+PSWD?", true);
 
+  delay(2000);
   
   calibrate();
   irrecv.enableIRIn();
 }
 
-void loop() {
-  //translateIR();
-  
-  int position = qtr.readLine(sensors,QTR_EMITTERS_ON);
-  if(digitalRead(BLUETOOTH_STATE)== HIGH){
-    runCommand("Bonjour bluetooth", false);
-  }
-  
-  if(start){
-     if(manualMode){
-        
-        manageManualMode();
-      }else{
-        getVitesseFromPosition(position);
-      }
-  }else{
-    rouler(0);
-  }
-}
+
 
 void calibrate() {
 //  lcd.clear();
@@ -111,18 +130,21 @@ void calibrate() {
 //  lcd.print("Calibration");
 //  lcd.setCursor(0, 1);
 //  lcd.print("dans 4s");
+  sendMessage("Calibration dans 4s");
   delay(4000);
 //  lcd.clear();
 //  lcd.print("Debut");
 //  lcd.setCursor(0, 1);
 //  lcd.print("calibration");
   //Serial.println("calibration");
+  sendMessage("Début calibration");
   int i;
   for (i = 0; i < 500; i++)  // make the calibration take about 5 seconds
   {
     qtr.calibrate(QTR_EMITTERS_ON);
     delay(20);
   }
+  sendMessage("Fin calibration");
   //Serial.println("fin calibration");
 //  lcd.clear();
 //  lcd.setCursor(0, 0);
@@ -133,26 +155,13 @@ void calibrate() {
 }
 
 void rouler(int vitesse) {
-    actionnerMoteur1(vitesse);
-    actionnerMoteur2(vitesse);
+    actionnerMoteurGauche(vitesse);
+    actionnerMoteurDroite(vitesse);
 }
 
-void actionnerMoteur1(int vitesse) {
-  digitalWrite(ENABLE_RIGHT,HIGH);
-  if(vitesse < 0) {
-    digitalWrite(DIRA_RIGHT,LOW);
-    digitalWrite(DIRB_RIGHT,HIGH);
-    analogWrite(ENABLE_RIGHT,(vitesse * -1)+140);
-  } else if(vitesse > 0) {
-    digitalWrite(DIRA_RIGHT,HIGH);
-    digitalWrite(DIRB_RIGHT,LOW);
-    analogWrite(ENABLE_RIGHT,vitesse+140);
-  } else {
-    digitalWrite(ENABLE_RIGHT,LOW);
-  }
-}
-
-void actionnerMoteur2(int vitesse) {
+void actionnerMoteurGauche(int vitesse) {
+String vitesseStr = String(vitesse);
+//  sendMessage("G " + vitesseStr);
   digitalWrite(ENABLE_LEFT,HIGH);
   if(vitesse < 0) {
     digitalWrite(DIRA_LEFT,LOW);
@@ -164,6 +173,23 @@ void actionnerMoteur2(int vitesse) {
     analogWrite(ENABLE_LEFT,vitesse+140);
   } else {
     digitalWrite(ENABLE_LEFT,LOW);
+  }
+}
+
+void actionnerMoteurDroite(int vitesse) {
+String vitesseStr = String(vitesse);
+//  sendMessage("D " + vitesseStr);
+  digitalWrite(ENABLE_RIGHT,HIGH);
+  if(vitesse < 0) {
+    digitalWrite(DIRA_RIGHT,LOW);
+    digitalWrite(DIRB_RIGHT,HIGH);
+    analogWrite(ENABLE_RIGHT,(vitesse * -1)+140);
+  } else if(vitesse > 0) {
+    digitalWrite(DIRA_RIGHT,HIGH);
+    digitalWrite(DIRB_RIGHT,LOW);
+    analogWrite(ENABLE_RIGHT,vitesse+140);
+  } else {
+    digitalWrite(ENABLE_RIGHT,LOW);
   }
 }
 
@@ -220,21 +246,23 @@ void manageManualMode() {
 
 void getVitesseFromPosition(int position){
   position = position - 1000;
+ String positionStr = String(position);
+sendMessage("P " + positionStr);
 
   //Gestion moteur droit
   if(position>=0){
-    actionnerMoteur2(maxSpeed);
+    actionnerMoteurDroite(maxSpeed);
   }else{
     int vitesse = maxSpeed + int((float(position)/float(500/maxSpeed)));
-    actionnerMoteur2(vitesse);
+    actionnerMoteurDroite(vitesse);
   }
 
 //Gestion moteur gauche
   if(position<=0){
-    actionnerMoteur1(maxSpeed);
+    actionnerMoteurGauche(maxSpeed);
   }else{
     int vitesse = maxSpeed - int((float(position)/float(500/maxSpeed)));
-    actionnerMoteur1(vitesse);
+    actionnerMoteurGauche(vitesse);
   }
 }
 
@@ -360,35 +388,24 @@ void translateIR(){
 }
 
 
-/**
- * Send a commond to the bluetooth module
- * 
- * command : command to send
- * isATCommand : specify if the command is for the module configuration or is to send to connected devices
- */
-void runCommand(String command, boolean isATCommand){
-  if(command.length() > 0){
 
-    // activate command mode
-    if(isATCommand){
-      digitalWrite(BLUETOOTH_KEY, HIGH);
-    }
 
-    // print command
-    Serial.print(command);
-    Serial.print("\r\n");
 
-    // wait for answer
-    delay(300);
 
-    // get and print answer
-    if(Serial.available()){
-      String input = Serial.readString();
-    }
-
-    // unactive command mode
-    if(isATCommand){
-      digitalWrite(BLUETOOTH_KEY, LOW);
-    }
+void loop() {
+  //translateIR();
+  
+  int position = qtr.readLine(sensors,QTR_EMITTERS_ON);
+  
+  
+  if(start){
+     if(manualMode){
+        
+        manageManualMode();
+      }else{
+        getVitesseFromPosition(position);
+      }
+  }else{
+    rouler(0);
   }
 }
